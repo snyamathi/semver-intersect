@@ -1,0 +1,5 @@
+*.log
+*.tgz
+.nyc_output
+artifacts
+node_modules
