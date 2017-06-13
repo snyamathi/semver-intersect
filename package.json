@@ -1,6 +1,6 @@
 {
     "author": "Suneil Nyamathi <snyamathi@gmail.com>",
-    "bugs": "http://github.com/snyamathi/semver-intersect/issues",
+    "bugs": "https://github.com/snyamathi/semver-intersect/issues",
     "contributors": [],
     "dependencies": {
         "semver": "^5.0.0"
@@ -19,7 +19,7 @@
     "name": "semver-intersect",
     "repository": {
         "type": "git",
-        "url": "git@github.com/snyamathi/semver-intersect"
+        "url": "git@github.com:snyamathi/semver-intersect.git"
     },
     "scripts": {
         "lint": "eslint .",
