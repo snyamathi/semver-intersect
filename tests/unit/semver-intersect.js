@@ -31,6 +31,26 @@ describe('createShorthand', () => {
         const result = createShorthand('>=4.0.0-beta.1 <4.1.0');
         expect(result).to.equal('~4.0.0-beta.1');
     });
+    it('should simplify 0.14.x to ~0.14.0', () => {
+        const result = createShorthand('>=0.14.0 <0.15.0');
+        expect(result).to.equal('^0.14.0');
+    });
+    it('should simplify ^0.0.5', () => {
+        const result = createShorthand('>=0.0.5 <0.0.6');
+        expect(result).to.equal('^0.0.5');
+    });
+    it('should simplify ~0.0.5', () => {
+        const result = createShorthand('>=0.0.5 <0.1.0');
+        expect(result).to.equal('~0.0.5');
+    });
+    it('should simplify to ~0.0.0', () => {
+        const result = createShorthand('>=0.0.0 <0.1.0');
+        expect(result).to.equal('~0.0.0');
+    });
+    it('should simplify to ^0.0.0', () => {
+        const result = createShorthand('>=0.0.0 <0.0.1');
+        expect(result).to.equal('^0.0.0');
+    });
     it('should return granular ranges without changes', () => {
         [
             '>4.0.0',

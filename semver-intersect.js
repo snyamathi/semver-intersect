@@ -14,6 +14,23 @@ function createShorthand (range) {
     }
 
     const [ min, max ] = match.slice(1);
+
+    // Special handling for major version 0
+    if (semver.major(min) === 0 && semver.major(max) === 0) {
+        // ^0.0.5
+        if (semver.minor(min) === 0 && semver.minor(max) === 0) {
+            return `^${min}`;
+        }
+
+        // ~0.0.5
+        if (semver.minor(min) === 0) {
+            return `~${min}`;
+        }
+
+        // ^0.5.0
+        return `^${min}`;
+    }
+
     if (semver.major(min) !== semver.major(max)) {
         return `^${min}`;
     }
