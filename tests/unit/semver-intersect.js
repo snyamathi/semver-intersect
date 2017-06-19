@@ -31,7 +31,7 @@ describe('createShorthand', () => {
         const result = createShorthand('>=4.0.0-beta.1 <4.1.0');
         expect(result).to.equal('~4.0.0-beta.1');
     });
-    it('should simplify 0.14.x to ~0.14.0', () => {
+    it('should simplify 0.14.x to ^0.14.0', () => {
         const result = createShorthand('>=0.14.0 <0.15.0');
         expect(result).to.equal('^0.14.0');
     });
