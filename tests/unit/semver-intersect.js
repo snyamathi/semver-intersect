@@ -1,4 +1,5 @@
 const expect = require('chai').expect;
+const semver = require('semver');
 const {
     createShorthand,
     ensureCompatible,
@@ -42,6 +43,14 @@ describe('createShorthand', () => {
     it('should simplify ~0.0.5', () => {
         const result = createShorthand('>=0.0.5 <0.1.0');
         expect(result).to.equal('~0.0.5');
+    });
+    it('should simplify 0.x', () => {
+        const result = createShorthand('>=0.0.0 <1.0.0');
+        expect(result).to.equal('0');
+    });
+    it('should simplify ~0.0.x', () => {
+        const result = createShorthand('>=0.0.0 <0.1.0');
+        expect(result).to.equal('~0.0.0');
     });
     it('should simplify to ~0.0.0', () => {
         const result = createShorthand('>=0.0.0 <0.1.0');

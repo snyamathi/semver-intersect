@@ -36,6 +36,10 @@ function createShorthand (range) {
     }
 
     if (semver.major(min) !== semver.major(max)) {
+        if (semver.major(min) === 0) {
+            return '0';
+        }
+
         return `^${min}`;
     }
 
