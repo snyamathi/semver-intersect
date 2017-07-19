@@ -2,7 +2,7 @@ const semver = require('semver');
 const regex = {
     condition: /^([<=>]+)?/,
     majorVersion: /\d+/,
-    minMax: /^>=([\d]+\.[\d]+\.[\d]+(?:-[\w.]+)?) <([\d]+\.[\d]+\.[\d]+)$/,
+    minMax: /^>=([\d]+\.[\d]+\.[\d]+(?:-[\w.]+)?) <=?([\d]+\.[\d]+\.[\d]+)$/,
     version: /([\d]+\.[\d]+\.[\d]+(?:-[\w.]+)?)$/,
     whitespace: /\s+/
 };
@@ -14,6 +14,10 @@ function createShorthand (range) {
     }
 
     const [ min, max ] = match.slice(1);
+    if (min === max) {
+        // Exact range
+        return min;
+    }
 
     // Special handling for major version 0
     if (semver.major(min) === 0 && semver.major(max) === 0) {
@@ -72,7 +76,8 @@ function intersect (...ranges) {
         // Exact version number specified, must be compatible with both bounds
         if (condition === '=') {
             ensureCompatible(range, lowerBound, upperBound);
-            lowerBound = upperBound = range;
+            lowerBound = '>=' + range;
+            upperBound = '<=' + range;
         }
 
         // New lower bound must be less than existing upper bound

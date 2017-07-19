@@ -130,6 +130,10 @@ describe('intersect', () => {
         const result = intersect('^4.0.0', '~4.3.0');
         expect(result).to.equal('~4.3.0');
     });
+    it('should return an exact version intersected with a range', () => {
+        const result = intersect('1.5.16', '^1.0.0');
+        expect(result).to.equal('1.5.16');
+    });
     it('should simplify redundant ranges', () => {
         const result = intersect('^4.0.0', '~4.3.89', '~4.3.24', '~4.3.63');
         expect(result).to.equal('~4.3.89');
