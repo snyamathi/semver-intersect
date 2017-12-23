@@ -6,4 +6,5 @@
 .nyc_output
 .travis.yml
 artifacts
+src
 tests
