@@ -132,7 +132,7 @@ function parseRange (range) {
 
 function union (a, b) {
     return b.reduce((result, value) => {
-        if (!result.includes(value)) {
+        if (result.indexOf(value) === -1) {
             result.push(value);
         }
         return result;

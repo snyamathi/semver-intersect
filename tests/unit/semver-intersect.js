@@ -1,5 +1,4 @@
 const expect = require('chai').expect;
-const semver = require('semver');
 const {
     createShorthand,
     ensureCompatible,
