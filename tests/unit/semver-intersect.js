@@ -1,15 +1,14 @@
 const expect = require('chai').expect;
 const semver = require('semver');
-const {
-    createShorthand,
-    ensureCompatible,
-    expandRanges,
-    formatIntersection,
-    intersect,
-    mergeBounds,
-    parseRange,
-    union
-} = require('../../semver-intersect');
+const semverIntersect = require('../../semver-intersect');
+const createShorthand = semverIntersect.createShorthand;
+const ensureCompatible = semverIntersect.ensureCompatible;
+const expandRanges = semverIntersect.expandRanges;
+const formatIntersection = semverIntersect.formatIntersection;
+const intersect = semverIntersect.intersect;
+const mergeBounds = semverIntersect.mergeBounds;
+const parseRange = semverIntersect.parseRange;
+const union = semverIntersect.union;
 
 describe('createShorthand', () => {
     it('should return exact ranges', () => {

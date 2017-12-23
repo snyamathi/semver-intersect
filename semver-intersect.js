@@ -1,3 +1,4 @@
+'use strict';
 const semver = require('semver');
 const regex = {
     condition: /^([<=>]+)?/,
@@ -6,6 +7,7 @@ const regex = {
     version: /([\d]+\.[\d]+\.[\d]+(?:-[\w.]+)?)$/,
     whitespace: /\s+/
 };
+const slice = Array.prototype.slice;
 
 function createShorthand (range) {
     const match = regex.minMax.exec(range);
@@ -13,7 +15,9 @@ function createShorthand (range) {
         return range;
     }
 
-    const [ min, max ] = match.slice(1);
+    const parts = match.slice(1);
+    const min = parts[0];
+    const max = parts[1];
     if (min === max) {
         // Exact range
         return min;
@@ -46,8 +50,10 @@ function createShorthand (range) {
     return `~${min}`;
 }
 
-function ensureCompatible(range, ...bounds) {
-    const { version } = parseRange(range);
+function ensureCompatible(range) {
+    const parsed = parseRange(range);
+    const version = parsed.version;
+    const bounds = slice.call(arguments, 1);
     bounds.forEach(bound => {
         if (bound && !semver.satisfies(version, bound)) {
             throw new Error(`Range ${range} is not compatible with ${bound}`);
@@ -55,7 +61,8 @@ function ensureCompatible(range, ...bounds) {
     });
 }
 
-function expandRanges (...ranges) {
+function expandRanges () {
+    const ranges = slice.call(arguments)
     return ranges.reduce((result, range) => {
         const validRange = semver.validRange(range);
         const validRanges = validRange.split(regex.whitespace);
@@ -63,7 +70,11 @@ function expandRanges (...ranges) {
     }, []);
 }
 
-function formatIntersection ({ lowerBound = '', upperBound = '' }) {
+function formatIntersection (opts) {
+    opts = opts || {};
+    const lowerBound = opts.lowerBound || '';
+    const upperBound = opts.upperBound || '';
+
     if (lowerBound === upperBound) {
         return lowerBound;
     }
@@ -71,11 +82,16 @@ function formatIntersection ({ lowerBound = '', upperBound = '' }) {
     return `${lowerBound} ${upperBound}`.trim();
 }
 
-function intersect (...ranges) {
-    ranges = expandRanges(...ranges);
+function intersect () {
+    let ranges = slice.call(arguments);
+    ranges = expandRanges.apply(null, ranges);
 
-    const bounds = ranges.reduce(({ lowerBound, upperBound }, range) => {
-        const { condition } = parseRange(range);
+    const bounds = ranges.reduce((opts, range) => {
+        opts = opts || {}
+        let lowerBound = opts.lowerBound;
+        let upperBound = opts.upperBound;
+        const parsed = parseRange(range);
+        const condition = parsed.condition
 
         // Exact version number specified, must be compatible with both bounds
         if (condition === '=') {
@@ -110,7 +126,9 @@ function mergeBounds (range, bound) {
         return range;
     }
 
-    const { condition, version } = parseRange(range);
+    const parsed = parseRange(range);
+    const condition = parsed.condition;
+    const version = parsed.version;
     const boundingVersion = parseRange(bound).version;
     const comparator = condition.startsWith('<') ? semver.lt : semver.gt;
     const strict = condition === '<' || condition === '>';
@@ -132,7 +150,7 @@ function parseRange (range) {
 
 function union (a, b) {
     return b.reduce((result, value) => {
-        if (!result.includes(value)) {
+        if (result.indexOf(value) === -1) {
             result.push(value);
         }
         return result;

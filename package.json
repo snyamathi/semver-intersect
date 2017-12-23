@@ -11,6 +11,9 @@
         "eslint": "^4.0.0",
         "jenkins-mocha": "^4.0.0"
     },
+    "engines": {
+        "node": ">=4"
+    },
     "keywords": [
         "semver"
     ],
