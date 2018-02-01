@@ -3,7 +3,6 @@ const regex = {
     condition: /^([<=>]+)?/,
     majorVersion: /\d+/,
     minMax: /^>=([\d]+\.[\d]+\.[\d]+(?:-[\w.]+)?) <=?([\d]+\.[\d]+\.[\d]+)$/,
-    prerelease: /([^\d]+)([\d]+)?/,
     version: /([\d]+\.[\d]+\.[\d]+(?:-[\w.]+)?)$/,
     whitespace: /\s+/
 };
@@ -48,13 +47,26 @@ function createShorthand (range) {
 }
 
 function ensureCompatible(range, ...bounds) {
-    const { major, minor, patch } = parseRange(range);
-    const version = [major, minor, patch].join('.');
+    const { prerelease, version } = parseRange(range);
 
     bounds.forEach(bound => {
-        if (bound && !semver.satisfies(version, bound)) {
-            throw new Error(`Range ${range} is not compatible with ${bound}`);
+        if (!bound || semver.satisfies(version, bound)) {
+            return;
         }
+
+        if (prerelease) {
+            if (parseRange(bound).prerelease) {
+                // If both bounds are pre-release versions, either can satisfy the other
+                if (semver.satisfies(parseRange(bound).version, range)) {
+                    return;
+                }
+            } else if (semver.satisfies(version, `${range} ${bound}`)) {
+                // If only our version is a pre-release version, don't fail on 1.0.0-a <2.0.0
+                return;
+            }
+        }
+
+        throw new Error(`Range ${range} is not compatible with ${bound}`);
     });
 }
 
@@ -78,7 +90,11 @@ function intersect (...ranges) {
     ranges = expandRanges(...ranges);
 
     const bounds = ranges.reduce(({ lowerBound, upperBound }, range) => {
-        const { condition } = parseRange(range);
+        const { condition, prerelease } = parseRange(range);
+
+        if (prerelease) {
+            ensureCompatible(range, lowerBound, upperBound);
+        }
 
         // Exact version number specified, must be compatible with both bounds
         if (condition === '=') {
@@ -108,29 +124,11 @@ function intersect (...ranges) {
     return shorthand;
 }
 
-// Prerelease versions must have the exact same major, minor, patch, and prerelease id
-function checkPrereleaseVersions (range, bound) {
-    const parsedRange = parseRange(range);
-    const parsedBound = parseRange(bound);
-
-    if (parsedRange.prerelease && parsedBound.prerelease) {
-        if (
-            (parsedRange.major !== parsedBound.major) ||
-            (parsedRange.minor !== parsedBound.minor) ||
-            (parsedRange.patch !== parsedBound.patch) ||
-            (parsedRange.prerelease[0] !== parsedBound.prerelease[0])
-        ) {
-            throw new Error(`Prerelease version ${range} is not compatible with ${bound}`);
-        }
-    }
-}
-
 function mergeBounds (range, bound) {
     if (!bound) {
         return range;
     }
 
-    checkPrereleaseVersions(range, bound);
     const { condition, version } = parseRange(range);
     const boundingVersion = parseRange(bound).version;
     const comparator = condition.startsWith('<') ? semver.lt : semver.gt;
@@ -148,17 +146,8 @@ function mergeBounds (range, bound) {
 function parseRange (range) {
     const condition = regex.condition.exec(range)[1] || '=';
     const version = regex.version.exec(range)[1];
-    const major = semver.major(version);
-    const minor = semver.minor(version);
-    const patch = semver.patch(version);
-
-    let prerelease = semver.prerelease(version);
-    if (prerelease && prerelease.length === 1) {
-        // Normalize prerelease tags such as -rc4 with -rc.4
-        prerelease = regex.prerelease.exec(prerelease[0]).slice(1);
-    }
-
-    return { condition, major, minor, patch, prerelease, version };
+    const prerelease = semver.prerelease(version);
+    return { condition, prerelease, version };
 }
 
 function union (a, b) {
