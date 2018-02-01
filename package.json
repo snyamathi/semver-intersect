@@ -31,5 +31,5 @@
         "pretest": "npm run build",
         "test": "jenkins-mocha tests/unit --recursive --compilers js:babel-register"
     },
-    "version": "1.2.0"
+    "version": "1.3.0"
 }
