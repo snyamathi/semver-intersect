@@ -138,6 +138,30 @@ describe('intersect', () => {
         const result = intersect('^4.0.0', '~4.3.0');
         expect(result).to.equal('~4.3.0');
     });
+    it('should handle pre-release versions mixed with versions', () => {
+        const result = intersect('^1.0.0-alpha.3', '^1.2.0');
+        expect(result).to.equal('^1.2.0');
+    });
+    it('should handle compatible pre-release versions', () => {
+        const result = intersect('^1.0.0-alpha.3', '^1.0.0-alpha.4');
+        expect(result).to.equal('^1.0.0-alpha.4');
+    });
+    it('should handle compatible pre-release versions without a dot', () => {
+        const result = intersect('^0.14.0-beta2', '^0.14.0-beta3');
+        expect(result).to.equal('^0.14.0-beta3');
+    });
+    it('should handle compatible pre-release versions with the same preid', () => {
+        const result = intersect('^0.14.0-beta', '^0.14.0-beta4');
+        expect(result).to.equal('^0.14.0-beta4');
+    });
+    it('should handle incompatible pre-release versions (different patch version)', () => {
+        const call = intersect.bind(null, '^1.9.0-alpha', '^1.9.1-alpha');
+        expect(call).to.throw('Prerelease version >=1.9.1-alpha is not compatible with >=1.9.0-alpha');
+    });
+    it('should handle incompatible pre-release versions (different preid)', () => {
+        const call = intersect.bind(null, '^1.9.0-alpha', '^1.9.0-beta');
+        expect(call).to.throw('Prerelease version >=1.9.0-beta is not compatible with >=1.9.0-alpha');
+    });
     it('should return an exact version intersected with a range', () => {
         const result = intersect('1.5.16', '^1.0.0');
         expect(result).to.equal('1.5.16');
@@ -173,14 +197,26 @@ describe('parseRange', () => {
     it('return the comparison condition and version', () => {
         expect(parseRange('<5.0.0')).to.deep.equal({
             condition: '<',
+            major: 5,
+            minor: 0,
+            patch: 0,
+            prerelease: null,
             version: '5.0.0'
         });
         expect(parseRange('>=4.0.0')).to.deep.equal({
             condition: '>=',
+            major: 4,
+            minor: 0,
+            patch: 0,
+            prerelease: null,
             version: '4.0.0'
         });
         expect(parseRange('3.0.0')).to.deep.equal({
             condition: '=',
+            major: 3,
+            minor: 0,
+            patch: 0,
+            prerelease: null,
             version: '3.0.0'
         });
     });

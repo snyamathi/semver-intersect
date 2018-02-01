@@ -3,6 +3,7 @@ const regex = {
     condition: /^([<=>]+)?/,
     majorVersion: /\d+/,
     minMax: /^>=([\d]+\.[\d]+\.[\d]+(?:-[\w.]+)?) <=?([\d]+\.[\d]+\.[\d]+)$/,
+    prerelease: /([^\d]+)([\d]+)?/,
     version: /([\d]+\.[\d]+\.[\d]+(?:-[\w.]+)?)$/,
     whitespace: /\s+/
 };
@@ -47,7 +48,9 @@ function createShorthand (range) {
 }
 
 function ensureCompatible(range, ...bounds) {
-    const { version } = parseRange(range);
+    const { major, minor, patch } = parseRange(range);
+    const version = [major, minor, patch].join('.');
+
     bounds.forEach(bound => {
         if (bound && !semver.satisfies(version, bound)) {
             throw new Error(`Range ${range} is not compatible with ${bound}`);
@@ -105,11 +108,29 @@ function intersect (...ranges) {
     return shorthand;
 }
 
+// Prerelease versions must have the exact same major, minor, patch, and prerelease id
+function checkPrereleaseVersions (range, bound) {
+    const parsedRange = parseRange(range);
+    const parsedBound = parseRange(bound);
+
+    if (parsedRange.prerelease && parsedBound.prerelease) {
+        if (
+            (parsedRange.major !== parsedBound.major) ||
+            (parsedRange.minor !== parsedBound.minor) ||
+            (parsedRange.patch !== parsedBound.patch) ||
+            (parsedRange.prerelease[0] !== parsedBound.prerelease[0])
+        ) {
+            throw new Error(`Prerelease version ${range} is not compatible with ${bound}`);
+        }
+    }
+}
+
 function mergeBounds (range, bound) {
     if (!bound) {
         return range;
     }
 
+    checkPrereleaseVersions(range, bound);
     const { condition, version } = parseRange(range);
     const boundingVersion = parseRange(bound).version;
     const comparator = condition.startsWith('<') ? semver.lt : semver.gt;
@@ -127,7 +148,17 @@ function mergeBounds (range, bound) {
 function parseRange (range) {
     const condition = regex.condition.exec(range)[1] || '=';
     const version = regex.version.exec(range)[1];
-    return { condition, version };
+    const major = semver.major(version);
+    const minor = semver.minor(version);
+    const patch = semver.patch(version);
+
+    let prerelease = semver.prerelease(version);
+    if (prerelease && prerelease.length === 1) {
+        // Normalize prerelease tags such as -rc4 with -rc.4
+        prerelease = regex.prerelease.exec(prerelease[0]).slice(1);
+    }
+
+    return { condition, major, minor, patch, prerelease, version };
 }
 
 function union (a, b) {
