@@ -138,6 +138,39 @@ describe('intersect', () => {
         const result = intersect('^4.0.0', '~4.3.0');
         expect(result).to.equal('~4.3.0');
     });
+    it('should handle pre-release versions mixed with versions', () => {
+        const result = intersect('^1.0.0-alpha.3', '^1.2.0');
+        expect(result).to.equal('^1.2.0');
+    });
+    it('should handle compatible pre-release versions', () => {
+        const result = intersect('^1.0.0-alpha.3', '^1.0.0-alpha.4');
+        expect(result).to.equal('^1.0.0-alpha.4');
+    });
+    it('should handle compatible pre-release versions without a dot', () => {
+        const result = intersect('^0.14.0-beta2', '^0.14.0-beta3');
+        expect(result).to.equal('^0.14.0-beta3');
+    });
+    it('should handle compatible pre-release versions with the same preid', () => {
+        const result = intersect('^0.14.0-beta', '^0.14.0-beta4');
+        expect(result).to.equal('^0.14.0-beta4');
+    });
+    it('should handle incompatible pre-release versions (different patch version)', () => {
+        const call = intersect.bind(null, '^1.9.0-alpha', '^1.9.1-alpha');
+        expect(call).to.throw('Range >=1.9.1-alpha is not compatible with >=1.9.0-alpha');
+    });
+    it('should handle compatible pre-release versions (preid lower in alphabetical order)', () => {
+        expect(intersect('^1.9.0-alpha', '^1.9.0-beta')).to.equal('^1.9.0-beta');
+        expect(intersect('^1.9.0-beta', '^1.9.0-alpha')).to.equal('^1.9.0-beta');
+        expect(intersect('^1.9.0-alpha.1', '^1.9.0-beta.2')).to.equal('^1.9.0-beta.2');
+    });
+    it('should handle incompatible pre-release versions (specific version)', () => {
+        expect(intersect.bind(null, '1.9.0-alpha.1', '^1.9.0-alpha.2'))
+            .to.throw('Range >=1.9.0-alpha.2 is not compatible with <=1.9.0-alpha.1');
+        expect(intersect.bind(null, '1.9.0-alpha.1', '1.9.0-alpha.0'))
+            .to.throw('Range 1.9.0-alpha.0 is not compatible with >=1.9.0-alpha.1');
+        expect(intersect.bind(null, '1.9.0-rc3', '^1.9.0-rc4'))
+            .to.throw('Range >=1.9.0-rc4 is not compatible with <=1.9.0-rc3');
+    });
     it('should return an exact version intersected with a range', () => {
         const result = intersect('1.5.16', '^1.0.0');
         expect(result).to.equal('1.5.16');
@@ -173,14 +206,17 @@ describe('parseRange', () => {
     it('return the comparison condition and version', () => {
         expect(parseRange('<5.0.0')).to.deep.equal({
             condition: '<',
+            prerelease: null,
             version: '5.0.0'
         });
         expect(parseRange('>=4.0.0')).to.deep.equal({
             condition: '>=',
+            prerelease: null,
             version: '4.0.0'
         });
         expect(parseRange('3.0.0')).to.deep.equal({
             condition: '=',
+            prerelease: null,
             version: '3.0.0'
         });
     });
