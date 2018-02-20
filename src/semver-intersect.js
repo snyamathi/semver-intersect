@@ -50,7 +50,11 @@ function ensureCompatible(range, ...bounds) {
     const { prerelease, version } = parseRange(range);
 
     bounds.forEach(bound => {
-        if (!bound || semver.satisfies(version, bound)) {
+        if (!bound) {
+            return;
+        }
+
+        if (semver.satisfies(version, bound) && semver.intersects(range, bound)) {
             return;
         }
 
