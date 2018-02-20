@@ -184,8 +184,14 @@ describe('intersect', () => {
         expect(call).to.throw('Range >=4.4.0 is not compatible with <4.4.0');
     });
     it('should not cross major bounds', () => {
-        const call = intersect.bind(null, '^5.0.0', '^4.0.1');
-        expect(call).to.throw('Range <5.0.0 is not compatible with >=5.0.0');
+        expect(intersect.bind(null, '^5.0.0', '^4.0.1'))
+            .to.throw('Range <5.0.0 is not compatible with >=5.0.0');
+        expect(intersect.bind(null, '^5.0.0', '^3.0.0'))
+            .to.throw('Range <4.0.0 is not compatible with >=5.0.0');
+        expect(intersect.bind(null, '~5.1.0', '~5.2.0'))
+            .to.throw('Range >=5.2.0 is not compatible with <5.2.0');
+        expect(intersect.bind(null, '^0.5.0', '^0.4.0'))
+            .to.throw('Range <0.5.0 is not compatible with >=0.5.0');
     });
 });
 
