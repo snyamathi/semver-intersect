@@ -59,6 +59,10 @@ describe('createShorthand', () => {
         const result = createShorthand('>=0.0.0 <0.0.1');
         expect(result).to.equal('^0.0.0');
     });
+    it('should simplify a range within the same major version', () => {
+        const result = createShorthand('>=1.0.0 <=1.5.3');
+        expect(result).to.equal('1.0.0 - 1.5.3');
+    });
     it('should return granular ranges without changes', () => {
         [
             '>4.0.0',
@@ -103,6 +107,10 @@ describe('expandRanges', () => {
     it('should expand the list of ranges into a set of unique individual ranges', () => {
         const result = expandRanges('>=3.0.0 <4.0.0', '>=3.1.0 <4.0.0', '>=3.3.0');
         expect(result).to.deep.equal(['>=3.0.0', '<4.0.0', '>=3.1.0', '>=3.3.0']);
+    });
+    it('should expand a range between two versions', () => {
+        const result = expandRanges('1.0.0 - 1.5.3');
+        expect(result).to.deep.equal(['>=1.0.0', '<=1.5.3']);
     });
 });
 
@@ -182,6 +190,10 @@ describe('intersect', () => {
     it('should throw on incompatible ranges', () => {
         const call = intersect.bind(null, '^4.0.0', '~4.3.0', '^4.4.0');
         expect(call).to.throw('Range >=4.4.0 is not compatible with <4.4.0');
+    });
+    it('should simplify issue 12', () => {
+        const result = intersect('1.0.0 - 1.5.3');
+        expect(result).to.equal('1.0.0 - 1.5.3');
     });
     it('should not cross major bounds', () => {
         expect(intersect.bind(null, '^5.0.0', '^4.0.1'))
