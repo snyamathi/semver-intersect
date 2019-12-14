@@ -3,7 +3,7 @@
     "bugs": "https://github.com/snyamathi/semver-intersect/issues",
     "contributors": [],
     "dependencies": {
-        "semver": "^6.0.0"
+        "semver": "^7.0.0"
     },
     "description": "Get the intersection of multiple semver ranges",
     "devDependencies": {
