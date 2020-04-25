@@ -3,8 +3,6 @@
 .eslintignore
 .eslintrc.yml
 .npmignore
-.nyc_output
 .travis.yml
-artifacts
 src
 tests
