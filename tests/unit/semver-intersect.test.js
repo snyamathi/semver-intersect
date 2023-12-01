@@ -6,7 +6,7 @@ const {
     intersect,
     mergeBounds,
     parseRange,
-    union
+    distinct
 } = require('../../semver-intersect');
 
 describe('createShorthand', () => {
@@ -103,14 +103,23 @@ describe('ensureCompatible', () => {
 });
 
 describe('expandRanges', () => {
-    it('should expand the list of ranges into a set of unique individual ranges', () => {
+    it('should expand the list of ranges into a proper group of ranges', () => {
         const result = expandRanges('>=3.0.0 <4.0.0', '>=3.1.0 <4.0.0', '>=3.3.0');
-        expect(result).toEqual(['>=3.0.0', '<4.0.0', '>=3.1.0', '>=3.3.0']);
+        expect(result).toEqual([[['>=3.0.0', '<4.0.0']], [['>=3.1.0', '<4.0.0']], [['>=3.3.0']]]);
     });
     it('should expand a range between two versions', () => {
         const result = expandRanges('1.0.0 - 1.5.3');
-        expect(result).toEqual(['>=1.0.0', '<=1.5.3']);
+        expect(result).toEqual([[['>=1.0.0', '<=1.5.3']]]);
     });
+    it('should expand unions and X-ranges', () => {
+        const result = expandRanges('1.* || 3.2.*', '*');
+        expect(result).toEqual([[['>=1.0.0', '<2.0.0'], ['>=3.2.0', '<3.3.0']], [['>=0.0.0']]]);
+    });
+    it('should expand unions of simultaneously upper- and lower-bounded ranges', () => {
+        const result = expandRanges('>=2.* <3.5.5 || ~3.6.0');
+        expect(result).toEqual([[['>=2.0.0', '<3.5.5'], ['>=3.6.0', '<3.7.0']]]);
+    })
+
 });
 
 describe('formatIntersection', () => {
@@ -243,9 +252,9 @@ describe('parseRange', () => {
     });
 });
 
-describe('union', () => {
-    it('should merge arrays without duplicates', () => {
-        const result = union([1, 2, 3], [3, 4, 5]);
-        expect(result).toEqual([1, 2, 3, 4, 5]);
+describe('distinct', () => {
+    it('should return array without duplicates', () => {
+        const result = distinct([1, 5, 2, 3, 4, 5, 3]);
+        expect(result).toEqual([1, 5, 2, 3, 4]);
     });
 });

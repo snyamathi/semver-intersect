@@ -4,7 +4,9 @@ const regex = {
     majorVersion: /\d+/,
     minMax: /^>=([\d]+\.[\d]+\.[\d]+(?:-[\w.]+)?) <=?([\d]+\.[\d]+\.[\d]+)$/,
     version: /([\d]+\.[\d]+\.[\d]+(?:-[\w.]+)?)$/,
-    whitespace: /\s+/
+    whitespace: /\s+/,
+    or: /\|\|/,
+    x: /^x|X|\*$/,
 };
 
 function createShorthand (range) {
@@ -79,12 +81,23 @@ function ensureCompatible(range, ...bounds) {
     });
 }
 
+/**
+ * Transform every provided semver range string by creating arrays from logical-or operation members
+ * and expanding all x-ranges
+ * @example
+ * expandRanges('1.* || 3.*', '* || 2.2.*')
+ * should return [[['>=1.0.0', '<2.0.0'], ['>=3.0.0', '<4.0.0']], [['>=0.0.0'], ['>=2.2.0', '<2.3.0']]]
+ */
 function expandRanges (...ranges) {
-    return ranges.reduce((result, range) => {
+    return ranges.map((range) => {
         const validRange = semver.validRange(range);
-        const validRanges = validRange.split(regex.whitespace);
-        return union(result, validRanges);
-    }, []);
+        return validRange.split(regex.or)
+            .map((part) => {
+                const simpleRanges = part.split(regex.whitespace)
+                    .map(coerceRange)
+                return distinct(simpleRanges)
+            });
+    });
 }
 
 function formatIntersection ({ lowerBound = '', upperBound = '' }) {
@@ -95,42 +108,63 @@ function formatIntersection ({ lowerBound = '', upperBound = '' }) {
     return `${lowerBound} ${upperBound}`.trim();
 }
 
+function updateBounds({ lowerBound, upperBound }, range) {
+    const { condition, prerelease } = parseRange(range);
+
+    if (prerelease) {
+        ensureCompatible(range, lowerBound, upperBound);
+    }
+
+    // Exact version number specified, must be compatible with both bounds
+    if (condition === '=') {
+        ensureCompatible(range, lowerBound, upperBound);
+        lowerBound = '>=' + range;
+        upperBound = '<=' + range;
+    }
+
+    // New lower bound must be less than existing upper bound
+    if (condition.startsWith('>')) {
+        ensureCompatible(range, upperBound);
+        lowerBound = mergeBounds(range, lowerBound);
+    }
+
+    // And vice versa
+    if (condition.startsWith('<')) {
+        ensureCompatible(range, lowerBound);
+        upperBound = mergeBounds(range, upperBound);
+    }
+
+    return { lowerBound, upperBound };
+}
+
 function intersect (...ranges) {
-    ranges = expandRanges(...ranges);
+    const rangeUnions = expandRanges(...ranges);
 
-    const bounds = ranges.reduce(({ lowerBound, upperBound }, range) => {
-        const { condition, prerelease } = parseRange(range);
+    const resultUnion = rangeUnions.reduce((boundsUnion, rangeUnion) => {
+        let error
 
-        if (prerelease) {
-            ensureCompatible(range, lowerBound, upperBound);
+        const intermediateBounds = allPairs(boundsUnion, rangeUnion)
+            .map(([bound, ranges]) => {
+                try {
+                    return ranges.reduce(updateBounds, bound)
+                } catch (e) {
+                    error ??= e
+                    return null
+                }
+            })
+            .filter(Boolean)
+
+        if (!intermediateBounds.length) {
+            throw error
         }
 
-        // Exact version number specified, must be compatible with both bounds
-        if (condition === '=') {
-            ensureCompatible(range, lowerBound, upperBound);
-            lowerBound = '>=' + range;
-            upperBound = '<=' + range;
-        }
+        return intermediateBounds
+    }, [{}]);
 
-        // New lower bound must be less than existing upper bound
-        if (condition.startsWith('>')) {
-            ensureCompatible(range, upperBound);
-            lowerBound = mergeBounds(range, lowerBound);
-        }
-
-        // And vice versa
-        if (condition.startsWith('<')) {
-            ensureCompatible(range, lowerBound);
-            upperBound = mergeBounds(range, upperBound);
-        }
-
-        return { lowerBound, upperBound };
-    }, {});
-
-    const range = formatIntersection(bounds);
-    const shorthand = createShorthand(range);
-
-    return shorthand;
+    return resultUnion.map((bound) => {
+        const range = formatIntersection(bound);
+        return createShorthand(range);
+    }).join(' || ');
 }
 
 function mergeBounds (range, bound) {
@@ -152,6 +186,10 @@ function mergeBounds (range, bound) {
     }
 }
 
+function coerceRange(range) {
+    return regex.x.exec(range) ? '>=0.0.0' : range
+}
+
 function parseRange (range) {
     const condition = regex.condition.exec(range)[1] || '=';
     const version = regex.version.exec(range)[1];
@@ -159,13 +197,15 @@ function parseRange (range) {
     return { condition, prerelease, version };
 }
 
-function union (a, b) {
-    return b.reduce((result, value) => {
-        if (result.indexOf(value) === -1) {
-            result.push(value);
-        }
-        return result;
-    }, a);
+function distinct(a) {
+    return [...new Set(a)];
+}
+
+function allPairs(arr1, arr2) {
+    return arr1.reduce((acc, cur) => {
+        arr2.forEach((y) => acc.push([cur, y]))
+        return acc
+    }, [])
 }
 
 module.exports.default = intersect;
@@ -177,4 +217,4 @@ module.exports.formatIntersection = formatIntersection;
 module.exports.intersect = intersect;
 module.exports.mergeBounds = mergeBounds;
 module.exports.parseRange = parseRange;
-module.exports.union = union;
+module.exports.distinct = distinct;
