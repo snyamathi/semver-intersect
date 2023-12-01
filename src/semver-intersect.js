@@ -95,37 +95,39 @@ function formatIntersection ({ lowerBound = '', upperBound = '' }) {
     return `${lowerBound} ${upperBound}`.trim();
 }
 
+function updateBounds({ lowerBound, upperBound }, range) {
+    const { condition, prerelease } = parseRange(range);
+
+    if (prerelease) {
+        ensureCompatible(range, lowerBound, upperBound);
+    }
+
+    // Exact version number specified, must be compatible with both bounds
+    if (condition === '=') {
+        ensureCompatible(range, lowerBound, upperBound);
+        lowerBound = '>=' + range;
+        upperBound = '<=' + range;
+    }
+
+    // New lower bound must be less than existing upper bound
+    if (condition.startsWith('>')) {
+        ensureCompatible(range, upperBound);
+        lowerBound = mergeBounds(range, lowerBound);
+    }
+
+    // And vice versa
+    if (condition.startsWith('<')) {
+        ensureCompatible(range, lowerBound);
+        upperBound = mergeBounds(range, upperBound);
+    }
+
+    return { lowerBound, upperBound };
+}
+
 function intersect (...ranges) {
     ranges = expandRanges(...ranges);
 
-    const bounds = ranges.reduce(({ lowerBound, upperBound }, range) => {
-        const { condition, prerelease } = parseRange(range);
-
-        if (prerelease) {
-            ensureCompatible(range, lowerBound, upperBound);
-        }
-
-        // Exact version number specified, must be compatible with both bounds
-        if (condition === '=') {
-            ensureCompatible(range, lowerBound, upperBound);
-            lowerBound = '>=' + range;
-            upperBound = '<=' + range;
-        }
-
-        // New lower bound must be less than existing upper bound
-        if (condition.startsWith('>')) {
-            ensureCompatible(range, upperBound);
-            lowerBound = mergeBounds(range, lowerBound);
-        }
-
-        // And vice versa
-        if (condition.startsWith('<')) {
-            ensureCompatible(range, lowerBound);
-            upperBound = mergeBounds(range, upperBound);
-        }
-
-        return { lowerBound, upperBound };
-    }, {});
+    const bounds = ranges.reduce(updateBounds, {});
 
     const range = formatIntersection(bounds);
     const shorthand = createShorthand(range);
