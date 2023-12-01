@@ -154,6 +154,22 @@ describe('intersect', () => {
         const result = intersect('^4.0.0', '~4.3.0');
         expect(result).toEqual('~4.3.0');
     });
+    it('should intersect an x range and tilde range', () => {
+      const result = intersect('4.x', '~4.3.0');
+      expect(result).toEqual('~4.3.0');
+    });
+    it('should intersect an or range and tilde range', () => {
+      const result = intersect('^4.1.2 || ^5.2.3', '~4.3.0');
+      expect(result).toEqual('~4.3.0');
+    });
+    it('should intersect a wildcard range', () => {
+      const result = intersect('1.*', '~1.3.0');
+      expect(result).toEqual('~1.3.0');
+    });
+    it('should intersect two or ranges', () => {
+      const result = intersect('^4.0.0 || ^5.1.2', '^4.1.2 || ^5.0.0');
+      expect(result).toEqual('^4.1.2 || ^5.1.2');
+    });
     it('should handle pre-release versions mixed with versions', () => {
         const result = intersect('^1.0.0-alpha.3', '^1.2.0');
         expect(result).toEqual('^1.2.0');
@@ -198,6 +214,10 @@ describe('intersect', () => {
     it('should throw on incompatible ranges', () => {
         const call = intersect.bind(null, '^4.0.0', '~4.3.0', '^4.4.0');
         expect(call).toThrow('Range >=4.4.0 is not compatible with <4.4.0');
+    });
+    it('should throw if or range cannot be satisfied', () => {
+      const call = intersect.bind(null, '^1.0.0 || ^3.0.0', '^2.0.0');
+      expect(call).toThrow('Range >=2.0.0 is not compatible with <2.0.0');
     });
     it('should simplify issue 12', () => {
         const result = intersect('1.0.0 - 1.5.3');
